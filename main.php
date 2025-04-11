@@ -99,7 +99,7 @@ $navbarColor = $_SESSION['navbar_color'] ?? "#333";
             background-color: #f2f2f2;
             border: 1px solid #ccc;
             resize: both;
-            overflow: auto;
+            overflow: hidden;
             width: 200px;
             height: 150px;
         }
@@ -107,12 +107,18 @@ $navbarColor = $_SESSION['navbar_color'] ?? "#333";
             position: absolute;
             font-size: 16px;
             color: black;
-            cursor: move;
+            
+        }
+        .resizable-image {
+            resize: both;
+            overflow: hidden;
+            position: absolute;
         }
     </style>
     <script>
         let selectedDiv = null;
         let selectedText = null;
+        let selectedImage = null;
 
         function createResizableDiv() {
             const contentArea = document.querySelector('.content-area');
@@ -235,6 +241,99 @@ $navbarColor = $_SESSION['navbar_color'] ?? "#333";
             document.getElementById('text-font-size').value = '';
             document.getElementById('text-color').value = '';
         }
+
+        function addImageFromLocal() {
+            const contentArea = document.querySelector('.content-area');
+            const fileInput = document.getElementById('image-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select an image file!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const newImage = document.createElement('img');
+                newImage.src = e.target.result;
+                newImage.classList.add('resizable-image');
+                newImage.style.top = '50px';
+                newImage.style.left = '50px';
+                newImage.style.width = '150px';
+                newImage.style.height = '150px';
+                newImage.style.position = 'absolute';
+
+                // Select the image when clicked
+                newImage.addEventListener('click', () => {
+                    selectedImage = newImage;
+                    updateImageInputs(newImage);
+                });
+
+                contentArea.appendChild(newImage);
+                selectedImage = newImage;
+                updateImageInputs(newImage);
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function updateImageInputs(image) {
+            document.getElementById('image-width').value = image.style.width.replace('px', '');
+            document.getElementById('image-height').value = image.style.height.replace('px', '');
+            document.getElementById('image-top').value = image.style.top.replace('px', '');
+            document.getElementById('image-left').value = image.style.left.replace('px', '');
+        }
+
+        function updateImageProperties() {
+            if (!selectedImage) return;
+
+            const width = document.getElementById('image-width').value;
+            const height = document.getElementById('image-height').value;
+            const top = document.getElementById('image-top').value;
+            const left = document.getElementById('image-left').value;
+
+            selectedImage.style.width = `${width}px`;
+            selectedImage.style.height = `${height}px`;
+            selectedImage.style.top = `${top}px`;
+            selectedImage.style.left = `${left}px`;
+        }
+
+        function deleteSelectedImage() {
+            if (!selectedImage) {
+                alert('No image selected to delete!');
+                return;
+            }
+            selectedImage.remove();
+            selectedImage = null;
+
+            // Clear the sidebar inputs
+            document.getElementById('image-width').value = '';
+            document.getElementById('image-height').value = '';
+            document.getElementById('image-top').value = '';
+            document.getElementById('image-left').value = '';
+        }
+
+        function dragImage(event) {
+            const image = selectedImage;
+            const shiftX = event.clientX - image.getBoundingClientRect().left;
+            const shiftY = event.clientY - image.getBoundingClientRect().top;
+
+            function moveAt(pageX, pageY) {
+                image.style.left = pageX - shiftX + 'px';
+                image.style.top = pageY - shiftY + 'px';
+            }
+
+            function onMouseMove(event) {
+                moveAt(event.pageX, event.pageY);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+
+            image.onmouseup = function () {
+                document.removeEventListener('mousemove', onMouseMove);
+                image.onmouseup = null;
+            };
+        }
     </script>
 </head>
 <body>
@@ -287,6 +386,25 @@ $navbarColor = $_SESSION['navbar_color'] ?? "#333";
 
         <button type="button" onclick="deleteSelectedDiv()">Delete Div</button>
         <button type="button" onclick="deleteSelectedText()">Delete Text</button>
+
+        <h3>Image</h3>
+        <label for="image-file">Select Image:</label>
+        <input type="file" id="image-file" accept="image/*">
+        <button type="button" onclick="addImageFromLocal()">Add Image</button>
+
+        <label for="image-width">Width (px):</label>
+        <input type="number" id="image-width" oninput="updateImageProperties()">
+
+        <label for="image-height">Height (px):</label>
+        <input type="number" id="image-height" oninput="updateImageProperties()">
+
+        <label for="image-top">Top (px):</label>
+        <input type="number" id="image-top" oninput="updateImageProperties()">
+
+        <label for="image-left">Left (px):</label>
+        <input type="number" id="image-left" oninput="updateImageProperties()">
+
+        <button type="button" onclick="deleteSelectedImage()">Delete Image</button>
 
         <form method="post">
             <button type="submit" name="reset">Reset All</button>
